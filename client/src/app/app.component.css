@@ -1,0 +1,18 @@
+.search {
+	position: fixed;
+	top: 20px;
+	width: 20%;
+}
+
+.card {
+	background-color: #dff0d8;
+	border-color: #d0e9c6;
+}
+
+.card-footer {
+	background-color: #d0e9c6;
+}
+
+.card-header {
+	background-color: #d0e9c6;
+}

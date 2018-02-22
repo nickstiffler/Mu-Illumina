@@ -1,0 +1,113 @@
+<div class="container">
+	<div class="row">
+		<div class="col-3">
+						<ngb-alert type="danger" *ngIf="serverError" (close)="serverError = false">
+			<strong>Something went wrong.</strong>
+		</ngb-alert>
+		<ngb-alert type="success" *ngIf="runQuery" [dismissible]="false">
+			<strong>Running query.</strong>
+		</ngb-alert>
+		<ngb-alert type="info" *ngIf="queryDone" (close)="queryDone = false" [dismissible]="false">
+			<strong>Number of clusters: {{clusterCount}}.<br>
+			<a href="#" (click)="downloadSelected()">Download Clusters (excel).</a></strong>
+		</ngb-alert>
+
+			<div class="card">
+				<div class="card-body">
+		<div class="card" *ngIf="runs">
+			<div class="card-header">
+			Select Runs<br /> <a href="#" (click)="selectAll()" class="small">select all</a> | <a href="#" (click)="deselect()" class="small">select none</a>
+
+			</div>
+			<div class="card-body" style="height: 150px; overflow-y: scroll;">
+			<div *ngFor="let run of runs">
+				<label class="form-check-label" for="run_{{run.id}}">
+					<input type="checkbox" class="form-check-input" id="run_{{run.id}}" [value]="run.id" (change)="selectRun($event)" [checked]="isSelected(run.id)">{{run.name}}</label>
+			</div>
+			</div>
+			</div>
+			<div class="card" *ngIf="barcodes">
+			<div class="card-header">
+				Select Barcodes
+			</div>
+			<div class="card-body" style="height: 150px; overflow-y: scroll;">
+			<div *ngFor="let barcode of barcodes">
+				<label class="form-check-label" for="bc_{{barcode.id}}">
+					<input type="checkbox" class="form-check-input" id="bc_{{barcode.id}}" [value]="barcode.id" (change)="selectBarcode($event)">{{barcode.barcode}}</label>
+			</div>
+			</div>
+			</div>
+			<div class="form-group">
+				<input type="text" class="form-control" placeholder="Search..." [(ngModel)]="term">
+			</div>
+			<div class="form-group">
+				<label class="form-check-label" for="barcodeUnion">
+				<input type="checkbox" class="form-check-input" id="barcodeUnion" [(ngModel)]="barcodeUnion">
+				Limit to insertions in common among selected barcodes</label>
+			</div>
+			<div class="form-group">
+				<label class="form-check-label" for="sortLoc">
+				<input type="checkbox" class="form-check-input" id="sortLoc" [(ngModel)]="sort">
+				Sort by genome location</label>
+			</div>
+
+			<button class="btn btn-primary" (click)="getCOIs()">Filter</button>
+</div>
+
+		</div>
+		</div>
+		<div class="col-9">
+<ngb-pagination *ngIf="clusters" [(collectionSize)]="clusterCount" [(page)]="page" [pageSize]="100" (pageChange)="getCOIs()" [maxSize]="13" [rotate]="true"></ngb-pagination>
+<div *ngIf="clusters" class="card">	<div class="row"><div class="col-2">Illumina Run, Barcode</div><div class="col-3">Mutants Sequenced</div><div class="col-3">Gene Near Insertion (v4 and v3)</div><div class="col-4">Chromosomal Location (v4)</div></div>
+
+	</div>
+
+<ngb-accordion *ngIf="clusters" #acc="ngbAccordion" (panelChange)="getCluster($event)" [closeOthers]="true"> 
+    <ngb-panel *ngFor="let cluster of clusters" id ="{{cluster.id}}">
+
+		<ng-template ngbPanelTitle><div class="row" style="text-decoration: none;"><div class="col-2"><p>{{cluster.name}}</p><p>{{cluster.barcode}}</p></div><div class="col-3">{{cluster.mutant}}</div><div class="col-3"><p *ngFor="let maize of cluster.maize">{{maize}}</p></div><div class="col-4">{{cluster.chr}}: {{cluster.start}}-{{cluster.end}}</div></div></ng-template>
+	
+        <ng-template ngbPanelContent>
+			<div class="card">
+				<div class="card-footer">
+					<h4>Sample</h4>
+				</div>
+				<div class="card-body" *ngIf="selectedCluster">
+					<div class="row"><div class="col-3">Run:</div><div class="col-9">{{cluster.name}} ({{cluster.date}})</div></div>
+					<div class="row"><div class="col-3">Barcode:</div><div class="col-9">{{cluster.barcode}}</div></div>
+					<div class="row"><div class="col-3">Ears:</div><div class="col-9">{{selectedCluster.ears}}</div></div>
+					<div class="row"><div class="col-3">Targeted Genes:</div><div class="col-9">{{selectedCluster.mutants}}</div></div>
+				</div>
+				<div class="card-footer">
+					<h4>Cluster</h4>
+					<h6 class="card-subtitle mb-2 text-muted">ID {{cluster.id}}</h6>
+				</div>
+				<div *ngIf="selectedCluster" class="card-body">
+					<div class="row">
+						<div class="col-3">Maize Genes:</div>
+						<div class="col-9"> <p *ngFor="let maize of cluster.maize">
+							<a *ngIf="maize.substr(0, 5) == 'GRMZM'" href="http://pogs.uoregon.edu/#/search/genemodel/{{maize}}_T01" target="_blank">{{maize}} (pogs)</a>
+							<a *ngIf="maize.substr(0, 2) == 'AC'" href="http://pogs.uoregon.edu/#/search/genemodel/{{maize.replace('FG', 'FGT')}}" target="_blank">{{maize}} (pogs)</a>
+							<a *ngIf="maize.substr(0, 2) == 'Zm'" href="http://ensembl.gramene.org/Zea_mays/Gene/Summary?g={{maize}}" target="_blank">{{maize}} (gramene)</a>
+						</p></div></div>
+				<div class="row"><div class="col-3">Location:</div><div class="col-9"><a href="http://ensembl.gramene.org/Zea_mays/Location/View?r={{cluster.chr}}:{{cluster.start}}-{{cluster.end}}" target="_blank">{{cluster.chr}}: {{cluster.start}} - {{cluster.end}} (gramene)</a> <button type="button" class="btn btn-default btn-sm" (click)="copyCluster(cluster)">copy</button></div></div>
+					<div class="row" *ngIf="cluster.insertion_start > 0"><div class="col-3">Insertion Location:</div><div class="col-9">(approximate)<a href="http://ensembl.gramene.org/Zea_mays/Location/View?r={{cluster.chr}}:{{cluster.insertion_start}}-{{cluster.insertion_end}}" target="_blank">{{cluster.chr}}: {{cluster.insertion_start}} - {{cluster.insertion_end}} (gramene)</a></div></div>
+
+					<div class="row"><div class="col-3">Length:</div><div class="col-9">{{cluster.end - cluster.start}} nt</div></div>
+					<div class="row"><div class="col-3">Depth:</div><div class="col-9">{{selectedCluster.size}} reads</div></div>
+					<div class="row"><div class="col-3">Sequence:</div><div class="col-9" [innerHTML]="selectedCluster.seq"></div></div>
+				</div>
+			<div class="card-footer">
+				<h4>Arabidopsis Ortholog</h4>
+			</div>
+			<div *ngIf="selectedCluster" class="card-body">
+							
+					<div class="row" *ngFor="let arab of Object.keys(selectedCluster.arab)"><div class="col-3"><a href="http://www.arabidopsis.org/servlets/TairObject?name={{arab}}&type=locus" target="_blank">{{arab}} (tair)</a></div><div class="col-9">{{selectedCluster.arab[arab]}}</div></div>
+				</div>
+			
+			</div>
+		</ng-template>
+	</ngb-panel>
+</ngb-accordion>
+</div>
+</div>
